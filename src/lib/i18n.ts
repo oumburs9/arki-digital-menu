@@ -1,0 +1,61 @@
+import type { L10n, Lang } from "../types";
+
+const UI = {
+  search: { en: "Search the menu", am: "ምናሌውን ይፈልጉ" },
+  all: { en: "All", am: "ሁሉም" },
+  table: { en: "Table", am: "ጠረጴዛ" },
+  fasting: { en: "Fasting", am: "ጾም" },
+  fastingOk: { en: "Fasting option", am: "የጾም አማራጭ አለው" },
+  vegetarian: { en: "Vegetarian", am: "አትክልት" },
+  spicy: { en: "Spicy", am: "ቅመም" },
+  popular: { en: "Popular", am: "ተወዳጅ" },
+  new: { en: "New", am: "አዲስ" },
+  noGluten: { en: "No gluten", am: "ያለ ግሉተን" },
+  noDairy: { en: "No dairy", am: "ያለ ወተት" },
+  noNuts: { en: "No nuts", am: "ያለ ለውዝ" },
+  noEgg: { en: "No egg", am: "ያለ እንቁላል" },
+  soldOut: { en: "Sold out", am: "አልቋል" },
+  backSoon: { en: "Back soon", am: "በቅርቡ ይመለሳል" },
+  add: { en: "Add to order", am: "ወደ ትዕዛዝ ጨምር" },
+  required: { en: "Required", am: "ግዴታ" },
+  chooseUpTo: { en: "Choose up to", am: "እስከ" },
+  optional: { en: "Optional", am: "አማራጭ" },
+  note: { en: "Note for the kitchen", am: "ለወጥ ቤት ማስታወሻ" },
+  notePh: { en: "e.g. no onion, extra hot", am: "ለምሳሌ፦ ያለ ሽንኩርት" },
+  pairs: { en: "Goes well with", am: "አብሮ የሚሄድ" },
+  viewOrder: { en: "View order", am: "ትዕዛዝ ይመልከቱ" },
+  yourOrder: { en: "Your order", am: "የእርስዎ ትዕዛዝ" },
+  subtotal: { en: "Subtotal", am: "ንዑስ ድምር" },
+  service: { en: "Service charge", am: "የአገልግሎት ክፍያ" },
+  vat: { en: "VAT", am: "ተ.እ.ታ" },
+  total: { en: "Total", am: "ጠቅላላ" },
+  placeOrder: { en: "Send order to kitchen", am: "ትዕዛዙን ላክ" },
+  orderNote: { en: "Note for the whole order", am: "ለትዕዛዙ ማስታወሻ" },
+  sent: { en: "Order sent!", am: "ትዕዛዝዎ ተልኳል!" },
+  sentSub: { en: "Your order number is", am: "የትዕዛዝ ቁጥርዎ" },
+  status_new: { en: "Received", am: "ደርሷል" },
+  status_preparing: { en: "Being prepared", am: "እየተዘጋጀ ነው" },
+  status_served: { en: "Served. Enjoy!", am: "ቀርቧል። መልካም ምግብ!" },
+  status_cancelled: { en: "Cancelled", am: "ተሰርዟል" },
+  orderMore: { en: "Order more", am: "ተጨማሪ ይዘዙ" },
+  callWaiter: { en: "Call waiter", am: "አስተናጋጅ ጥራ" },
+  askBill: { en: "Ask for the bill", am: "ሂሳብ ይምጣ" },
+  called: { en: "A waiter is on the way", am: "አስተናጋጅ እየመጣ ነው" },
+  empty: { en: "Nothing matches. Try another filter.", am: "ምንም አልተገኘም። ሌላ ማጣሪያ ይሞክሩ።" },
+  min: { en: "min", am: "ደቂቃ" },
+  viewOnly: { en: "Show this menu to your waiter to order.", am: "ለማዘዝ ይህን ምናሌ ለአስተናጋጁ ያሳዩ።" },
+  qty: { en: "Quantity", am: "ብዛት" },
+  noTable: { en: "Scan the QR code on your table to order.", am: "ለማዘዝ በጠረጴዛዎ ላይ ያለውን QR ኮድ ይቃኙ።" },
+  filters: { en: "Filters", am: "ማጣሪያ" },
+  clear: { en: "Clear", am: "አጽዳ" },
+  items: { en: "items", am: "እቃዎች" },
+  remove: { en: "Remove", am: "አስወግድ" },
+  poweredBy: { en: "Powered by Arki", am: "በአርኪ የቀረበ" },
+} satisfies Record<string, L10n>;
+
+export type UIKey = keyof typeof UI;
+export const t = (lang: Lang, key: UIKey) => UI[key][lang];
+export const tx = (lang: Lang, v: L10n) => v[lang] || v.en;
+
+export const birr = (n: number, lang: Lang) =>
+  `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${lang === "am" ? "ብር" : "ETB"}`;

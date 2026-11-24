@@ -43,7 +43,7 @@ npm run dev
 
 ## Deploy on GitHub Pages
 
-The workflow in `.github/workflows/pages.yml` builds and publishes the site on every push to `main`. In the repository, open **Settings → Pages** and set **Source** to **GitHub Actions** once. The site is then at `https://oumburs9.github.io/arki-digital-menu/`, and deep links like `/m/tsehay-coffee?t=5` work through `404.html`.
+The workflow in `.github/workflows/pages.yml` builds and publishes the site on every push to `main`. It publishes to the `gh-pages` branch, which GitHub Pages serves. The site is then at `https://oumburs9.github.io/arki-digital-menu/`, and deep links like `/m/tsehay-coffee?t=5` work through `404.html`.
 
 ## Deploy on Vercel
 

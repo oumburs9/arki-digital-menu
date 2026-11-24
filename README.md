@@ -41,6 +41,10 @@ npm install
 npm run dev
 ```
 
+## Deploy on GitHub Pages
+
+The workflow in `.github/workflows/pages.yml` builds and publishes the site on every push to `main`. In the repository, open **Settings → Pages** and set **Source** to **GitHub Actions** once. The site is then at `https://oumburs9.github.io/arki-digital-menu/`, and deep links like `/m/tsehay-coffee?t=5` work through `404.html`.
+
 ## Deploy on Vercel
 
 Import this repository in Vercel. It detects Vite automatically; `vercel.json` sets the build and the SPA rewrites so `/m/...` and `/owner/...` links work.

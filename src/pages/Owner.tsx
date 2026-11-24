@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { CATEGORIES } from "../data/seed";
 import { birr } from "../lib/i18n";
 import { describeChoices } from "../lib/pricing";
-import { navigate } from "../lib/router";
+import { asset, BASE, href, navigate } from "../lib/router";
 import { getTenant, repo, useTenantState } from "../lib/store";
 import type { FeatureFlags, MenuItem, OrderStatus } from "../types";
 
@@ -52,7 +52,7 @@ function Login({ slug, onOk }: { slug: string; onOk: () => void }) {
           else setErr("Wrong email or password.");
         }}
       >
-        <img src="/arki-logo.png" alt="Arki Tech Solutions" className="login-logo" />
+        <img src={asset("arki-logo.png")} alt="Arki Tech Solutions" className="login-logo" />
         <h1>Owner login</h1>
         <p className="muted">{tenant.name.en}</p>
         <label>
@@ -96,7 +96,7 @@ function Dashboard({ slug, onLogout }: { slug: string; onLogout: () => void }) {
     <div className="owner">
       <header className="o-header">
         <div className="o-brand">
-          <img src="/arki-logo.png" alt="Arki" />
+          <img src={asset("arki-logo.png")} alt="Arki" />
           <div>
             <strong>{tenant.name.en}</strong>
             <span className="muted">
@@ -105,7 +105,7 @@ function Dashboard({ slug, onLogout }: { slug: string; onLogout: () => void }) {
           </div>
         </div>
         <div className="o-head-actions">
-          <a className="btn-ghost small" href={`/m/${slug}?t=1`} target="_blank" rel="noreferrer">
+          <a className="btn-ghost small" href={href(`/m/${slug}?t=1`)} target="_blank" rel="noreferrer">
             Open guest menu ↗
           </a>
           <button className="btn-ghost small" onClick={onLogout}>
@@ -172,7 +172,7 @@ function Orders({ slug }: { slug: string }) {
         <div className="empty-card">
           <p>No open orders yet.</p>
           <p className="muted">
-            Open the guest menu for <a href={`/m/${slug}?t=5`} target="_blank" rel="noreferrer">table 5</a> in another tab and place an order. It appears here instantly.
+            Open the guest menu for <a href={href(`/m/${slug}?t=5`)} target="_blank" rel="noreferrer">table 5</a> in another tab and place an order. It appears here instantly.
           </p>
         </div>
       )}
@@ -436,7 +436,7 @@ function QrCodes({ slug }: { slug: string }) {
   const tenant = getTenant(slug)!;
   const [codes, setCodes] = useState<{ table: number; url: string; img: string }[]>([]);
   useEffect(() => {
-    const base = window.location.origin;
+    const base = window.location.origin + BASE;
     Promise.all(
       Array.from({ length: tenant.tables }, (_, i) => i + 1).map(async (table) => {
         const url = `${base}/m/${slug}?t=${table}`;

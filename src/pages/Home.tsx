@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { TENANTS } from "../data/seed";
-import { navigate } from "../lib/router";
+import { asset, href, navigate } from "../lib/router";
 
 const FEATURES = [
   ["🌍", "Amharic & English", "Guests switch language with one tap."],
@@ -22,7 +22,7 @@ export default function Home() {
   return (
     <div className="home">
       <header className="h-header">
-        <img src="/arki-logo.png" alt="Arki Tech Solutions" />
+        <img src={asset("arki-logo.png")} alt="Arki Tech Solutions" />
       </header>
       <section className="h-hero">
         <p className="eyebrow">Arki hospitality platform · Layer 1</p>
@@ -44,10 +44,10 @@ export default function Home() {
               <span className="plan">{t.plan}</span>
             </div>
             <div className="demo-actions">
-              <a className="btn-primary" href={`/m/${t.slug}?t=5`} onClick={(e) => go(e, `/m/${t.slug}?t=5`)}>
+              <a className="btn-primary" href={href(`/m/${t.slug}?t=5`)} onClick={(e) => go(e, `/m/${t.slug}?t=5`)}>
                 Guest menu (table 5)
               </a>
-              <a className="btn-ghost" href={`/owner/${t.slug}`} onClick={(e) => go(e, `/owner/${t.slug}`)}>
+              <a className="btn-ghost" href={href(`/owner/${t.slug}`)} onClick={(e) => go(e, `/owner/${t.slug}`)}>
                 Owner panel
               </a>
             </div>

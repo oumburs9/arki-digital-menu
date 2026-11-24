@@ -7,6 +7,7 @@ import { CATEGORIES } from "../data/seed";
 import { birr, t, tx, type UIKey } from "../lib/i18n";
 import { totals } from "../lib/pricing";
 import { getTenant, repo, useTenantState } from "../lib/store";
+import { asset } from "../lib/router";
 import type { CartLine, Lang, MenuItem } from "../types";
 
 type FilterKey = "fasting" | "vegetarian" | "noGluten" | "noDairy" | "noNuts" | "noEgg";
@@ -319,7 +320,7 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
             {tenant.address} · {tenant.phone}
           </p>
           <a href="https://arkisolutions.com" target="_blank" rel="noreferrer" className="powered">
-            <img src="/arki-logo.png" alt="Arki Tech Solutions" />
+            <img src={asset("arki-logo.png")} alt="Arki Tech Solutions" />
             <span>{t(effLang, "poweredBy")}</span>
           </a>
         </footer>

@@ -18,7 +18,7 @@ export const ALL_FEATURES: FeatureFlags = {
 export const TENANTS: Tenant[] = [
   {
     slug: "tsehay-coffee",
-    name: { en: "Tsehay Coffee House", am: "ፀሐይ ቡና ቤት" },
+    name: { en: "Abol Coffee House", am: "አቦል ቡና ቤት" },
     tagline: { en: "Coffee, breakfast and fasting food in Bole", am: "ቡና፣ ቁርስ እና የጾም ምግብ በቦሌ" },
     type: "cafe",
     address: "Bole, Addis Ababa",
@@ -27,13 +27,14 @@ export const TENANTS: Tenant[] = [
     tables: 12,
     serviceChargePct: 10,
     vatPct: 15,
-    owner: { email: "owner@tsehay.demo", password: "demo1234" },
+    owner: { email: "owner@abol.demo", password: "demo1234" },
     features: { ...ALL_FEATURES },
     plan: "growth",
+    appearance: { theme: "espresso", headings: "serif", layout: "list", corners: "soft" },
   },
   {
     slug: "buna-corner",
-    name: { en: "Buna Corner", am: "ቡና ኮርነር" },
+    name: { en: "Lomi Café", am: "ሎሚ ካፌ" },
     tagline: { en: "A small café on the Starter plan: view-only menu", am: "ትንሽ ካፌ፦ ለማየት ብቻ የሆነ ምናሌ" },
     type: "cafe",
     address: "Piassa, Addis Ababa",
@@ -42,9 +43,10 @@ export const TENANTS: Tenant[] = [
     tables: 4,
     serviceChargePct: 0,
     vatPct: 15,
-    owner: { email: "owner@bunacorner.demo", password: "demo1234" },
+    owner: { email: "owner@lomicafe.demo", password: "demo1234" },
     features: { ...ALL_FEATURES, ordering: false, upselling: false, callWaiter: false, analytics: false, orderNotes: false },
     plan: "starter",
+    appearance: { theme: "emerald", headings: "sans", layout: "grid", corners: "round" },
   },
 ];
 

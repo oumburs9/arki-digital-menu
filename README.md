@@ -21,17 +21,23 @@ Layer 1 of the **Arki hospitality platform**: a mobile-first QR menu that takes 
 - QR codes for every table, printable
 - Settings: every feature switched on or off per business (the configuration layer)
 
-**Two sample restaurants** show the configuration layer:
-- `tsehay-coffee`: Growth plan, all features on
-- `buna-corner`: Starter plan, view-only menu
+**Arki console** (`/admin`, super admin only)
+- Sets each business's appearance at delivery: five themes (Emerald, Espresso, Midnight dark, Terracotta, Ocean), serif or sans headings, list or grid menu layout, soft/round/sharp corners
+- Live phone preview of the real guest menu before applying
+- Once applied, the owner panel shows the appearance as "Managed by Arki" (read-only)
 
-Demo owner logins are shown on the login screen and home page.
+**Two sample businesses** show the configuration layer:
+- `tsehay-coffee` (Abol Coffee House): Growth plan, all features on, Espresso theme
+- `buna-corner` (Lomi Café): Starter plan, view-only menu, Emerald theme with grid layout
+
+Demo owner logins are shown on the login screen and home page. The demo Arki console login is shown on its sign-in screen.
 
 ## Architecture
 
 - React 18 + TypeScript + Vite, no backend required for the demo
 - `src/lib/store.ts` is the only data layer. In the demo it uses the browser's localStorage, with live updates between tabs through BroadcastChannel. Replace it with the Arki platform API (orders, kitchen, stock, payments) to sync across devices, without changing the screens.
 - `src/types.ts` `FeatureFlags` is the configuration layer; `Tenant.plan` is where Arki decides what each plan includes.
+- `Appearance` (in `src/types.ts`) is the visual layer. Themes are CSS variables in `src/styles.css` under `[data-theme]`, switched by `src/lib/appearance.ts`. Icons are inline SVG (`src/components/Icon.tsx`), no emoji.
 - Multi-tenant by URL: one link per restaurant, one QR code per table.
 
 ## Run locally

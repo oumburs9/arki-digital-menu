@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ITEMS, TENANTS } from "../data/seed";
-import type { AnalyticsEvent, EventKind, FeatureFlags, MenuItem, Order, OrderStatus, Tenant, WaiterCall } from "../types";
+import type { Appearance, AnalyticsEvent, EventKind, FeatureFlags, MenuItem, Order, OrderStatus, Tenant, WaiterCall } from "../types";
 
 /**
  * Data layer for the demo. Everything goes through this repository, so it can
@@ -14,6 +14,7 @@ import type { AnalyticsEvent, EventKind, FeatureFlags, MenuItem, Order, OrderSta
 interface TenantState {
   items: MenuItem[];
   features: FeatureFlags;
+  appearance: Appearance;
   orders: Order[];
   calls: WaiterCall[];
   events: AnalyticsEvent[];
@@ -28,6 +29,7 @@ function seedState(t: Tenant): TenantState {
   return {
     items: structuredClone(ITEMS),
     features: { ...t.features },
+    appearance: { ...t.appearance },
     orders: [],
     calls: [],
     events: [],
@@ -42,7 +44,12 @@ function load(slug: string): TenantState {
   if (!t) throw new Error(`Unknown restaurant: ${slug}`);
   try {
     const raw = localStorage.getItem(KEY(slug));
-    if (raw) return JSON.parse(raw) as TenantState;
+    if (raw) {
+      const s = JSON.parse(raw) as TenantState;
+      // Saved before appearance existed: start from the delivered default.
+      if (!s.appearance) s.appearance = { ...t.appearance };
+      return s;
+    }
   } catch {
     /* storage unavailable: fall back to memory */
   }
@@ -82,6 +89,7 @@ export function getTenant(slug: string): Tenant | undefined {
 }
 
 /** Subscribes a component to one restaurant's live state. */
+export type { TenantState };
 export function useTenantState(slug: string): TenantState {
   const [state, setState] = useState(() => load(slug));
   useEffect(() => {
@@ -112,6 +120,12 @@ export const repo = {
   setFeature(slug: string, key: keyof FeatureFlags, on: boolean) {
     update(slug, (s) => {
       s.features[key] = on;
+    });
+  },
+  /** Super admin only (Arki console). */
+  setAppearance(slug: string, appearance: Appearance, by: string) {
+    update(slug, (s) => {
+      s.appearance = { ...appearance, appliedAt: Date.now(), appliedBy: by };
     });
   },
   placeOrder(slug: string, order: Omit<Order, "id" | "number" | "status" | "createdAt">): Order {

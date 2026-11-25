@@ -3,11 +3,13 @@ import CartSheet from "../components/CartSheet";
 import ItemSheet from "../components/ItemSheet";
 import Photo from "../components/Photo";
 import Tags from "../components/Tags";
+import Icon, { categoryIcon } from "../components/Icon";
 import { CATEGORIES } from "../data/seed";
 import { birr, t, tx, type UIKey } from "../lib/i18n";
 import { totals } from "../lib/pricing";
 import { getTenant, repo, useTenantState } from "../lib/store";
 import { asset } from "../lib/router";
+import { decodeAppearance, useDocumentAppearance } from "../lib/appearance";
 import type { CartLine, Lang, MenuItem } from "../types";
 
 type FilterKey = "fasting" | "vegetarian" | "noGluten" | "noDairy" | "noNuts" | "noEgg";
@@ -50,6 +52,12 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
   const tenant = getTenant(slug)!;
   const state = useTenantState(slug);
   const f = state.features;
+  // The Arki console previews a draft appearance in an iframe: ?preview=theme.headings.layout.corners
+  const preview = useMemo(() => decodeAppearance(new URLSearchParams(window.location.search).get("preview")), []);
+  useDocumentAppearance(preview ?? state.appearance);
+  const track: typeof repo.track = (...a) => {
+    if (!preview) repo.track(...a);
+  };
 
   const [lang, setLangState] = useState<Lang>(() => {
     try {
@@ -93,7 +101,7 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
     const k = `arki-opened:${slug}`;
     if (!sessionStorage.getItem(k)) {
       sessionStorage.setItem(k, "1");
-      repo.track(slug, "menu_open");
+      track(slug, "menu_open");
     }
   }, [slug]);
 
@@ -118,8 +126,26 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
       n.has(k) ? n.delete(k) : n.add(k);
       return n;
     });
-    repo.track(slug, "filter_used");
+    track(slug, "filter_used");
   };
+
+  // Height of the sticky search/filter bar, shared with CSS (scroll offsets) and the scroll spy.
+  const toolsRef = useRef<HTMLDivElement>(null);
+  const [toolsH, setToolsH] = useState(140);
+  useEffect(() => {
+    const el = toolsRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      setToolsH(h);
+      document.documentElement.style.setProperty("--tools-h", `${h}px`);
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--tools-h");
+    };
+  }, []);
 
   // Scroll spy for the category bar
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
@@ -130,26 +156,25 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
         const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
         if (vis[0]) setActiveCat(vis[0].target.id.replace("cat-", ""));
       },
-      { rootMargin: "-140px 0px -60% 0px" },
+      { rootMargin: `-${toolsH + 8}px 0px -60% 0px` },
     );
     Object.values(sectionRefs.current).forEach((el) => el && obs.observe(el));
     return () => obs.disconnect();
-  }, [sections.length, query, filters]);
+  }, [sections.length, query, filters, toolsH]);
   useEffect(() => {
     chipRefs.current[activeCat]?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   }, [activeCat]);
 
   const jump = (id: string) => {
     const el = sectionRefs.current[id];
-    const bar = document.querySelector(".sticky-tools")?.getBoundingClientRect().height ?? 140;
-    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - bar - 8, behavior: "smooth" });
+    if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - toolsH - 8, behavior: "smooth" });
   };
 
   const open = useCallback(
     (item: MenuItem, upsell = false) => {
       setOpenItem(item);
       setFromUpsell(upsell);
-      repo.track(slug, "item_view", item.id);
+      track(slug, "item_view", item.id);
     },
     [slug],
   );
@@ -159,10 +184,10 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
       const ex = c.find((l) => l.key === line.key);
       return ex ? c.map((l) => (l.key === line.key ? { ...l, qty: l.qty + line.qty } : l)) : [...c, line];
     });
-    repo.track(slug, "add_to_cart", line.itemId, line.unitPrice * line.qty);
-    if (fromUpsell) repo.track(slug, "upsell_added", line.itemId, line.unitPrice * line.qty);
+    track(slug, "add_to_cart", line.itemId, line.unitPrice * line.qty);
+    if (fromUpsell) track(slug, "upsell_added", line.itemId, line.unitPrice * line.qty);
     setOpenItem(null);
-    flash(effLang === "am" ? "ወደ ትዕዛዝ ተጨምሯል" : "Added to your order");
+    flash(t(effLang, "added"));
   };
 
   const flash = (msg: string) => {
@@ -178,8 +203,9 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
   const count = validCart.reduce((s, l) => s + l.qty, 0);
 
   const place = (note: string) => {
+    if (preview) return setCartOpen(false); // Arki console preview: never send real orders
     const o = repo.placeOrder(slug, { table, lines: validCart, note: note || undefined, ...tot, lang: effLang });
-    repo.track(slug, "order_placed", undefined, o.total);
+    track(slug, "order_placed", undefined, o.total);
     setMyOrders((m) => [o.id, ...m]);
     setCart([]);
     setCartOpen(false);
@@ -192,54 +218,63 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
 
   return (
     <div className="menu-page">
-      <header className="m-header">
-        <div className="m-brand">
+      <header className="m-hero">
+        <div className="m-hero-top">
           <div className="m-logo" aria-hidden>
             {tenant.name.en[0]}
           </div>
-          <div>
-            <h1>{tx(effLang, tenant.name)}</h1>
-            <p>{tx(effLang, tenant.tagline)}</p>
-            {table && (
-              <span className="table-chip">
-                {t(effLang, "table")} {table}
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="m-actions">
           {f.amharic && (
-            <div className="lang-switch" role="group" aria-label="Language">
-              <button className={effLang === "en" ? "on" : ""} onClick={() => setLang("en")}>
+            <div className="lang-switch" role="group" aria-label={t(effLang, "language")}>
+              <button className={effLang === "en" ? "on" : ""} aria-pressed={effLang === "en"} onClick={() => setLang("en")}>
                 EN
               </button>
-              <button className={effLang === "am" ? "on" : ""} onClick={() => setLang("am")}>
+              <button className={effLang === "am" ? "on" : ""} aria-pressed={effLang === "am"} onClick={() => setLang("am")} lang="am">
                 አማ
               </button>
             </div>
           )}
         </div>
+        <h1 className="m-title">{tx(effLang, tenant.name)}</h1>
+        <p className="m-tagline">{tx(effLang, tenant.tagline)}</p>
+        <div className="m-meta">
+          {table && (
+            <span className="pill pill-brand">
+              <Icon name="table" size={14} /> {t(effLang, "table")} {table}
+            </span>
+          )}
+          <span className="pill">
+            <Icon name="pin" size={14} /> {tenant.address}
+          </span>
+        </div>
       </header>
 
       {placed.length > 0 && (
-        <section className="order-tracker" aria-live="polite">
+        <section className="order-tracker" aria-live="polite" aria-label={t(effLang, "orderStatus")}>
           {placed.map((o) => {
-            const steps: Array<typeof o.status> = ["new", "preparing", "served"];
-            const idx = steps.indexOf(o.status);
+            const steps = ["new", "preparing", "served"] as const;
+            const idx = steps.indexOf(o.status as (typeof steps)[number]);
             return (
               <div key={o.id} className={`tracker-card status-${o.status}`}>
                 <div className="tracker-head">
-                  <strong>
-                    {t(effLang, "sent")} #{o.number}
-                  </strong>
-                  <span>{t(effLang, `status_${o.status}` as UIKey)}</span>
+                  <span className="tracker-ic" aria-hidden>
+                    <Icon name={o.status === "served" ? "check" : o.status === "cancelled" ? "x" : "clock"} size={18} strokeWidth={2.2} />
+                  </span>
+                  <div>
+                    <strong>
+                      {t(effLang, "sent")} #{o.number}
+                    </strong>
+                    <span>{t(effLang, `status_${o.status}` as UIKey)}</span>
+                  </div>
                 </div>
                 {o.status !== "cancelled" && (
-                  <div className="tracker-steps">
+                  <ol className="tracker-steps">
                     {steps.map((s, i) => (
-                      <span key={s} className={i <= idx ? "done" : ""} />
+                      <li key={s} className={i < idx ? "done" : i === idx ? "current" : ""}>
+                        <span className="bar" />
+                        <span className="lbl">{t(effLang, `step_${s}` as UIKey)}</span>
+                      </li>
                     ))}
-                  </div>
+                  </ol>
                 )}
               </div>
             );
@@ -247,77 +282,126 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
         </section>
       )}
 
-      <div className="sticky-tools">
-        <div className="search">
-          <span aria-hidden>⌕</span>
+      <div className="sticky-tools" ref={toolsRef}>
+        <label className="search">
+          <Icon name="search" size={19} />
           <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t(effLang, "search")} aria-label={t(effLang, "search")} />
-        </div>
+          {query && (
+            <button type="button" className="search-clear" onClick={() => setQuery("")} aria-label={t(effLang, "clear")}>
+              <Icon name="x" size={16} strokeWidth={2.2} />
+            </button>
+          )}
+        </label>
         {f.filters && (
           <div className="chip-row filters" role="group" aria-label={t(effLang, "filters")}>
+            <span className="chip-lead" aria-hidden>
+              <Icon name="sliders" size={16} />
+            </span>
             {FILTERS.map((k) => (
               <button key={k} className={`chip ${filters.has(k) ? "on" : ""} ${k === "fasting" ? "chip-fasting" : ""}`} onClick={() => toggleFilter(k)} aria-pressed={filters.has(k)}>
-                {k === "fasting" && "🌿 "}
+                {k === "fasting" && <Icon name="leaf" size={14} strokeWidth={2.2} />}
+                {filters.has(k) && k !== "fasting" && <Icon name="check" size={14} strokeWidth={2.6} />}
                 {t(effLang, k)}
               </button>
             ))}
             {filters.size > 0 && (
               <button className="chip clear" onClick={() => setFilters(new Set())}>
-                {t(effLang, "clear")}
+                <Icon name="x" size={14} strokeWidth={2.4} /> {t(effLang, "clear")}
               </button>
             )}
           </div>
         )}
-        <nav className="chip-row cats" aria-label="Categories">
+        <nav className="cat-row" aria-label={t(effLang, "categories")}>
           {sections.map(({ c }) => (
-            <button key={c.id} ref={(el) => (chipRefs.current[c.id] = el)} className={`cat-chip ${activeCat === c.id ? "on" : ""}`} onClick={() => jump(c.id)}>
-              <span aria-hidden>{c.icon}</span> {tx(effLang, c.name)}
+            <button
+              key={c.id}
+              ref={(el) => (chipRefs.current[c.id] = el)}
+              className={`cat-chip ${activeCat === c.id ? "on" : ""}`}
+              aria-current={activeCat === c.id ? "true" : undefined}
+              onClick={() => jump(c.id)}
+            >
+              <Icon name={categoryIcon(c.id)} size={16} /> {tx(effLang, c.name)}
             </button>
           ))}
         </nav>
       </div>
 
-      {!f.ordering && <p className="notice">{t(effLang, "viewOnly")}</p>}
-      {f.ordering && !table && <p className="notice">{t(effLang, "noTable")}</p>}
+      {!f.ordering && (
+        <p className="notice">
+          <Icon name="utensils" size={18} /> {t(effLang, "viewOnly")}
+        </p>
+      )}
+      {f.ordering && !table && (
+        <p className="notice">
+          <Icon name="qr" size={18} /> {t(effLang, "noTable")}
+        </p>
+      )}
 
       <main className="m-main">
-        {sections.length === 0 && <p className="empty">{t(effLang, "empty")}</p>}
+        {sections.length === 0 && (
+          <div className="empty-state">
+            <Icon name="search" size={28} />
+            <p>{t(effLang, "empty")}</p>
+            {(filters.size > 0 || query) && (
+              <button className="btn-ghost small" onClick={() => (setFilters(new Set()), setQuery(""))}>
+                {t(effLang, "clear")}
+              </button>
+            )}
+          </div>
+        )}
         {sections.map(({ c, list }) => (
-          <section key={c.id} id={`cat-${c.id}`} ref={(el) => (sectionRefs.current[c.id] = el)} className="m-section">
-            <h2>
+          <section key={c.id} id={`cat-${c.id}`} ref={(el) => (sectionRefs.current[c.id] = el)} className="m-section" aria-labelledby={`h-${c.id}`}>
+            <h2 id={`h-${c.id}`}>
+              <span className="sec-ic" aria-hidden>
+                <Icon name={categoryIcon(c.id)} size={18} />
+              </span>
               {tx(effLang, c.name)} <small>{list.length}</small>
             </h2>
             <div className="item-grid">
-              {list.map((i) => (
-                <button key={i.id} className={`item-card ${i.soldOut && f.liveSoldOut ? "sold" : ""}`} onClick={() => open(i)}>
-                  <div className="item-text">
-                    <h3>{tx(effLang, i.name)}</h3>
-                    <p className="item-desc">{tx(effLang, i.description)}</p>
-                    <Tags item={i} lang={effLang} />
-                    <div className="item-foot">
-                      <span className="price">{birr(i.price, effLang)}</span>
-                      {i.options.length > 0 && <span className="opt-hint">{effLang === "am" ? "አማራጮች አሉ" : "Options"}</span>}
+              {list.map((i) => {
+                const sold = i.soldOut && f.liveSoldOut;
+                return (
+                  <button key={i.id} className={`item-card ${sold ? "sold" : ""} ${f.photos ? "" : "no-photo"}`} onClick={() => open(i)}>
+                    <div className="item-text">
+                      <h3>{tx(effLang, i.name)}</h3>
+                      <p className="item-desc">{tx(effLang, i.description)}</p>
+                      <Tags item={i} lang={effLang} />
+                      <div className="item-foot">
+                        <span className="price">{birr(i.price, effLang)}</span>
+                        {i.options.length > 0 && <span className="opt-hint">{t(effLang, "options")}</span>}
+                        {!f.photos && sold && <span className="sold-label inline">{t(effLang, "soldOut")}</span>}
+                        {!f.photos && canOrder && !i.soldOut && (
+                          <span className="add-dot inline" aria-hidden>
+                            <Icon name="plus" size={18} strokeWidth={2.6} />
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  {f.photos && (
-                    <div className="item-photo-wrap">
-                      <Photo className="item-photo" src={i.photo} alt={tx(effLang, i.name)} icon={c.icon} />
-                      {i.soldOut && f.liveSoldOut && <span className="sold-label">{t(effLang, "soldOut")}</span>}
-                      {canOrder && !i.soldOut && (
-                        <span className="add-dot" aria-hidden>
-                          +
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  {!f.photos && i.soldOut && f.liveSoldOut && <span className="sold-label inline">{t(effLang, "soldOut")}</span>}
-                </button>
-              ))}
+                    {f.photos && (
+                      <div className="item-photo-wrap">
+                        <Photo className="item-photo" src={i.photo} alt={tx(effLang, i.name)} categoryId={c.id} />
+                        {sold && <span className="sold-label">{t(effLang, "soldOut")}</span>}
+                        {canOrder && !i.soldOut && (
+                          <span className="add-dot" aria-hidden>
+                            <Icon name="plus" size={18} strokeWidth={2.6} />
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </section>
         ))}
         <footer className="m-footer">
-          <p>
-            {tenant.address} · {tenant.phone}
+          <p className="m-contact">
+            <span>
+              <Icon name="pin" size={15} /> {tenant.address}
+            </span>
+            <a href={`tel:${tenant.phone.replace(/\s/g, "")}`}>
+              <Icon name="phone" size={15} /> {tenant.phone}
+            </a>
           </p>
           <a href="https://arkisolutions.com" target="_blank" rel="noreferrer" className="powered">
             <img src={asset("arki-logo.png")} alt="Arki Tech Solutions" />
@@ -330,26 +414,32 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
         <div className="bottom-bar">
           {f.callWaiter && table && (
             <button
-              className={`btn-ghost ${activeCall ? "called" : ""}`}
+              className={`btn-ghost call-btn ${activeCall ? "called" : ""}`}
+              aria-label={activeCall ? t(effLang, "called") : t(effLang, "callWaiter")}
               onClick={() => {
                 if (activeCall) return;
-                repo.callWaiter(slug, table, "waiter");
+                !preview && repo.callWaiter(slug, table, "waiter");
                 flash(t(effLang, "called"));
               }}
             >
-              {activeCall ? `✓ ${t(effLang, "called")}` : `🔔 ${t(effLang, "callWaiter")}`}
+              <Icon name={activeCall ? "check" : "bell"} size={19} />
+              <span className="call-label" aria-hidden>
+                {activeCall ? t(effLang, "called") : t(effLang, "callWaiter")}
+              </span>
             </button>
           )}
           {canOrder && count > 0 && (
             <button className="btn-primary grow cart-btn" onClick={() => (setToast(""), setCartOpen(true))}>
-              <span className="count">{count}</span>
-              <span>{t(effLang, "viewOrder")}</span>
-              <span>{birr(tot.subtotal, effLang)}</span>
+              <span className="count" aria-label={`${count} ${t(effLang, "items")}`}>
+                {count}
+              </span>
+              <span className="cart-label">{t(effLang, "viewOrder")}</span>
+              <span className="cart-total">{birr(tot.subtotal, effLang)}</span>
             </button>
           )}
           {canOrder && count === 0 && placed.length > 0 && f.callWaiter && (
-            <button className="btn-ghost" onClick={() => !activeCall && (repo.callWaiter(slug, table, "bill"), flash(t(effLang, "called")))}>
-              🧾 {t(effLang, "askBill")}
+            <button className="btn-ghost bill-btn" onClick={() => !activeCall && (!preview && repo.callWaiter(slug, table, "bill"), flash(t(effLang, "called")))}>
+              <Icon name="receipt" size={18} /> {t(effLang, "askBill")}
             </button>
           )}
         </div>
@@ -357,7 +447,7 @@ export default function MenuPage({ slug, table }: { slug: string; table: string 
 
       {toast && (
         <div className="toast" role="status">
-          {toast}
+          <Icon name="check" size={16} strokeWidth={2.6} /> {toast}
         </div>
       )}
 

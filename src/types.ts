@@ -61,6 +61,18 @@ export interface FeatureFlags {
   orderNotes: boolean;
 }
 
+/** Visual presets. Chosen by the Arki super admin when the menu is delivered; owners can't change it. */
+export type ThemeId = "emerald" | "espresso" | "midnight" | "terracotta" | "ocean";
+export interface Appearance {
+  theme: ThemeId;
+  headings: "serif" | "sans";
+  layout: "list" | "grid"; // item cards on phones: photo beside text, or two-column photo cards
+  corners: "soft" | "round" | "sharp";
+  /** When Arki applied this appearance (delivery). */
+  appliedAt?: number;
+  appliedBy?: string;
+}
+
 export interface Tenant {
   slug: string;
   name: L10n;
@@ -75,6 +87,7 @@ export interface Tenant {
   owner: { email: string; password: string };
   features: FeatureFlags;
   plan: "starter" | "growth" | "enterprise";
+  appearance: Appearance;
 }
 
 export interface CartLine {
